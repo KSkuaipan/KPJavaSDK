@@ -12,11 +12,19 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.Map;
 
 import com.kuaipan.client.exception.KuaipanIOException;
 import com.kuaipan.client.model.KuaipanHTTPResponse;
 import com.kuaipan.client.model.KuaipanURL;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 
 public class KuaipanHTTPUtility {
 	public final static int BUFFER_SIZE = 4048;
@@ -24,7 +32,7 @@ public class KuaipanHTTPUtility {
 	public final static String CONTENT_HOST = "api-content.dfs.kuaipan.cn";
 	public final static String CONV_HOST = "conv.kuaipan.cn";
 	
-	public final static String AUTH_URL = "https://www.kuaipan.cn/api.php?ac=open&op=authorise&oauth_token=";
+	public final static String AUTH_URL = "http://www.kuaipan.cn/api.php?ac=open&op=authorise&oauth_token=";
 	public final static String UPLOAD_LOCATE_URL = "http://api-content.dfs.kuaipan.cn/1/fileops/upload_locate";
 
 	
@@ -242,7 +250,21 @@ public class KuaipanHTTPUtility {
 	private static KuaipanHTTPResponse doGet(KuaipanURL kpurl) 
 			throws KuaipanIOException {
 		KuaipanHTTPResponse resp = new KuaipanHTTPResponse();
-		
+        TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager(){
+                    public X509Certificate[] getAcceptedIssuers(){ return null; }
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                }
+        };
+
+        try {
+            SSLContext sslContext = SSLContext.getInstance("SSL");
+            sslContext.init(null, trustAllCerts, new SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 		HttpURLConnection con = getConnectionFromUrl(kpurl.url, "GET");
 		resp.code = getResponseHTTPStatus(con);
 		resp.content = getStringDataFromConnection(con);
